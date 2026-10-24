@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CO Attainment Calculator – I CSE B</title>
+<style>
+:root{--ink:#1c2b3a;--paper:#fbfaf6;--rule:#cfd6dc;--edit:#fff3c4;--calc:#e8eeea;--accent:#1f5d4a;--bad:#b3261e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 Georgia,"Times New Roman",serif}
+header{background:var(--ink);color:#fff;padding:14px 16px}
+header .college{margin:0;font-size:12px;opacity:.8}
+h1{margin:4px 0;font-size:22px}
+header p{margin:2px 0}
+.tools{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
+button{font:inherit;padding:6px 12px;border:1px solid #fff;background:#fff;color:var(--ink);border-radius:3px;cursor:pointer}
+button.ghost{background:transparent;color:#fff}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid #f0a400;outline-offset:1px}
+nav{display:flex;overflow-x:auto;background:#e9ece8;border-bottom:2px solid var(--accent);position:sticky;top:0;z-index:5}
+nav a{padding:10px 14px;color:var(--ink);text-decoration:none;white-space:nowrap}
+nav a.on{background:var(--accent);color:#fff}
+main{padding:12px 16px;max-width:1100px;margin:auto}
+h2{margin:8px 0}
+.note{font-size:13px;color:#4a5a66}
+.scroll{overflow-x:auto;border:1px solid var(--rule)}
+table{border-collapse:collapse;width:100%;min-width:560px;font:14px system-ui,sans-serif}
+th,td{border:1px solid var(--rule);padding:4px 6px;text-align:center}
+th{background:#dde5e0}
+td.l{text-align:left;white-space:nowrap}
+td.calc{background:var(--calc);font-variant-numeric:tabular-nums}
+.stat th{text-align:right;background:#f1f4f1}
+input{font:inherit;width:100%}
+td input{background:var(--edit);border:1px solid #d9c46a;padding:4px;text-align:center;min-width:70px}
+input.bad{border-color:var(--bad);background:#fde7e5;color:var(--bad)}
+input.wide{min-width:220px;border:1px solid var(--rule);padding:4px}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;margin:8px 0}
+.meta label{font:13px system-ui,sans-serif;display:flex;flex-direction:column;gap:2px}
+.meta input{border:1px solid var(--rule);padding:6px;background:#fff}
+.cards{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.cards div{flex:1 1 150px;border-left:4px solid var(--accent);background:#fff;padding:6px 10px;font:13px system-ui,sans-serif}
+.cards b{display:block;font-size:20px}
+footer{padding:12px 16px;font-size:12px;color:#4a5a66}
+@media print{header .tools,nav,footer{display:none}header{background:none;color:#000}td input{background:none;border:0}.scroll{overflow:visible}}
+#msg{font-size:13px;min-height:1em}#msg a,#msg button{color:#fff;font-size:13px;padding:2px 8px}#msg a{border:0;text-decoration:underline}button.mini{font-size:12px;padding:3px 8px;margin-left:8px;border:1px solid var(--ink);background:#fff;color:var(--ink)}
+#warn{background:#f0a400;color:#1c2b3a;padding:0 8px;font-size:13px}#warn:empty{display:none}
+</style>
+</head>
+<body>
+<header>
+  <p class="college">National Engineering College, K.R. Nagar, Kovilpatti – 628503 · Department of Science and Humanities</p>
+  <h1>Course Outcome Attainment</h1>
+  <p id="course"></p><p id="sub"></p>
+  <div class="tools"><button id="xlsx">Generate final Excel file</button><button id="csv">Export CSV</button><button id="print">Print</button><button id="reset" class="ghost">Clear marks</button></div>
+  <p id="msg" role="status"></p>
+  <p id="warn" role="alert"></p>
+</header>
+<nav id="nav" aria-label="Sections"></nav>
+<main id="view"></main>
+<footer>Marks are saved in this browser only. Use Export CSV to keep a copy.</footer>
+<script>
+/* CSE B (Year I) student list, from "Name List - I CSE - B.pdf". Read-only. [register number, name] */
+(typeof window !== "undefined" ? window : globalThis).STUDENTS = [
+  ['26104043', 'PON RAJESH M'], ['26104045', 'MEENU ROSHINI M P'], ['26104046', 'LEVINA AINSLEY N'],
+  ['26104047', 'PREETHIGAA V'], ['26104048', 'HARINI P'], ['26104049', 'NAVRUDHAA S'],
+  ['26104050', 'ADHI HARIJITH S K'], ['26104051', 'BEAULAH P'], ['26104052', 'KAMALINATCHIYAR R'],
+  ['26104053', 'BHARGAVI M'], ['26104054', 'MUTHUMARI L'], ['26104055', 'ROOHI P S'],
+  ['26104056', 'MUTHUVARSHA C'], ['26104057', 'RISHITH C R'], ['26104058', 'MAHALAKSHMI S'],
+  ['26104059', 'SAMUVEL M'], ['26104060', 'RENUJA R'], ['26104061', 'MANORANJANI DEVI S'],
+  ['26104062', 'RIMONA V'], ['26104063', 'HUMAIRAH FATEMA S'], ['26104064', 'ABHINAYAA A'],
+  ['26104065', 'ANEKSHA PRABHAKAR'], ['26104066', 'POORNIMA DEVI G'], ['26104067', 'AJAY U'],
+  ['26104068', 'KULANDAI ANANTHAN R'], ['26104069', 'DEVI SRI S'], ['26104070', 'SAKTHEESH M'],
+  ['26104071', 'KIRUTHIKA P'], ['26104072', 'NEHA SHREE A'], ['26104073', 'SERANTHAYAN A'],
+  ['26104074', 'VANI S'], ['26104075', 'RENUKASRI R S'], ['26104076', 'NELASREE S'],
+  ['26104077', 'INDHUDEVI S'], ['26104078', 'SHREEJAS'], ['26104079', 'MANOJKUMAR V'],
+  ['26104080', 'SUBA LAKSHMI R'], ['26104081', 'LAKSHITHA K'], ['26104082', 'KARPAGASELVI N'],
+  ['26104083', 'CHANDRU S'], ['26104084', 'JAYASHREE K'], ['26104128', 'DHARUN KANNAN A']
+];
+if (typeof module !== "undefined") module.exports = (typeof window !== "undefined" ? window : globalThis).STUDENTS;
+</script>
+<script>
+/* Calculation engine. Mirrors FINAL IT.xlsx formulas exactly (see README).
+   Pure functions, no DOM, so it can be tested in Node. */
+(function (g) {
+  'use strict';
+  var COS = ['CO1', 'CO2', 'CO3', 'CO4', 'CO5'];
+  // Weights (CAT, 2nd tool, 3rd tool) read from the CO sheets' G-column formulas.
+  var W = { CO1: [60, 30, 10], CO2: [60, 30, 10], CO3: [60, 20, 20], CO4: [60, 20, 20], CO5: [60, 30, 10] };
+  var TARGET = 100, THRESHOLD = 70;
+
+  // 'blank' | 'invalid' (not a number, <0 or >100) | 'ok'
+  function parse(v) {
+    if (v === null || v === undefined || String(v).trim() === '') return { s: 'blank' };
+    var n = Number(String(v).trim());
+    if (!isFinite(n) || n < 0 || n > 100) return { s: 'invalid' };
+    return { s: 'ok', n: n };
+  }
+
+  // Excel: =(((D/100)*w1))+((E/100)*w2)+((F/100)*w3). Null unless all 3 marks are valid.
+  function coScore(co, marks) {
+    var w = W[co], p = [parse(marks[0]), parse(marks[1]), parse(marks[2])];
+    for (var i = 0; i < 3; i++) if (p[i].s !== 'ok') return null;
+    return ((p[0].n / 100) * w[0]) + ((p[1].n / 100) * w[1]) + ((p[2].n / 100) * w[2]);
+  }
+
+  // Excel rows 22-27. n = students with a result (Excel uses fixed 14).
+  function stats(scores) {
+    var v = scores.filter(function (x) { return x !== null; });
+    var n = v.length, r = { n: n, target: TARGET, threshold: THRESHOLD, avg: null, count: null, pct: null, rel: null };
+    if (!n) return r;
+    var sum = 0; v.forEach(function (x) { sum += x; });
+    r.avg = sum / n;                                              // SUM(G8:G21)/N
+    r.count = v.filter(function (x) { return x > THRESHOLD; }).length; // COUNTIF(">"&70), strict
+    r.pct = (r.count / n) * 100;                                  // (count/N)*100
+    r.rel = (r.avg / TARGET) * 100;                               // (avg/target)*100
+    return r;
+  }
+
+  // Excel Overall!I = AVERAGE(D:H). Null unless all five COs have a result.
+  function mean(a) {
+    for (var i = 0; i < a.length; i++) if (a[i] === null) return null;
+    var s = 0; a.forEach(function (x) { s += x; }); return s / a.length;
+  }
+  function overallStudent(five) { return mean(five); }
+  // Overall!I22..I27 = AVERAGE of the five CO columns' stat values.
+  function overallStats(st) {
+    function m(k) { return mean(st.map(function (s) { return s[k]; })); }
+    return { avg: m('avg'), target: TARGET, threshold: THRESHOLD, count: m('count'), pct: m('pct'), rel: m('rel') };
+  }
+
+  g.CO = { COS: COS, W: W, TARGET: TARGET, THRESHOLD: THRESHOLD, parse: parse, coScore: coScore,
+           stats: stats, overallStudent: overallStudent, overallStats: overallStats };
+  if (typeof module !== 'undefined') module.exports = g.CO;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>
+(function () {
+  'use strict';
+  var S = window.STUDENTS, C = window.CO, COS = C.COS, KEY = 'coCalcV1';
+  var TOOLS = {
+    CO1: ['CAT', 'MCQ (Cognitive)', 'Viva (Affective)'], CO2: ['CAT', 'Assignment (Cognitive)', 'Viva (Affective)'],
+    CO3: ['CAT', 'MCQ (Cognitive)', 'Presentation'], CO4: ['CAT', 'Assignment (Cognitive)', 'Presentation'],
+    CO5: ['CAT', 'Assignment (Cognitive)', 'Viva (Affective)']
+  };
+  var META = [['course', 'Course code and name'], ['year', 'Year, semester, branch and section'],
+    ['instructor', 'Course instructor'], ['coordinator', 'Course coordinator'], ['hod', 'HOD']];
+  var state = load(), tab = 'summary', view = document.getElementById('view');
+
+  function load() { try { var s = JSON.parse(localStorage.getItem(KEY)); if (s && s.marks) return s; } catch (e) {} return { marks: {}, meta: {} }; }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  // Two-tap confirmation. window.confirm() is silently blocked inside many previews and in-app viewers, so it is not used.
+  function ask(btn, text, action) {
+    if (btn.dataset.armed) { clearTimeout(+btn.dataset.armed); btn.dataset.armed = ''; btn.textContent = btn.dataset.label; action(); return; }
+    btn.dataset.label = btn.textContent; btn.textContent = text;
+    btn.dataset.armed = setTimeout(function () { btn.dataset.armed = ''; btn.textContent = btn.dataset.label; }, 4000);
+  }
+  function esc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function mk(co, reg) { return (state.marks[co] && state.marks[co][reg]) || ['', '', '']; }
+  function scores(co) { return S.map(function (s) { return C.coScore(co, mk(co, s[0])); }); }
+  function f(x) { return x === null || x === undefined ? '–' : String(Math.round(x)); } // display only, like the Excel's format 0
+  function meta(k) { return state.meta[k] || ''; }
+  function head() {
+    document.getElementById('course').textContent = meta('course') || 'Course name not set (enter it on the Summary Sheet)';
+    document.getElementById('sub').textContent = meta('year') || 'I CSE – B';
+  }
+
+  function statRows(st, cols) { // cols: array of stat objects; returns tbody rows
+    var rows = [['Average attainment', 'avg'], ['Target', 'target'], ['Threshold', 'threshold'],
+      ['No. of students attained threshold (> threshold)', 'count'], ['Attainment % based on threshold', 'pct'],
+      ['Relative attainment % based on average attainment', 'rel']];
+    return rows.map(function (r) {
+      return '<tr class="stat"><th colspan="3">' + r[0] + '</th>' + st.map(function (s, i) {
+        return '<td class="calc" data-st="' + r[1] + '" data-i="' + i + '">' + f(s[r[1]]) + '</td>';
+      }).join('') + '</tr>';
+    }).join('');
+  }
+
+  function renderSummary() {
+    var inputs = META.map(function (m) {
+      return '<label>' + m[1] + '<input data-meta="' + m[0] + '" value="' + esc(meta(m[0])) + '"></label>';
+    }).join('');
+    var rows = COS.map(function (co) {
+      var st = C.stats(scores(co)), w = C.W[co], t = TOOLS[co];
+      return '<tr><td>' + co + '</td><td><input class="wide" data-meta="' + co + '" placeholder="Course outcome statement" value="' + esc(meta(co)) + '"></td>' +
+        '<td class="l">' + t.map(function (x, i) { return x + ' ' + w[i] + '%'; }).join('<br>') + '</td>' +
+        '<td>' + C.TARGET + '</td><td>' + C.THRESHOLD + '</td><td class="calc">' + f(st.pct) + '</td><td class="calc">' + f(st.avg) + '</td><td class="calc">' + f(st.rel) + '</td></tr>';
+    }).join('');
+    var done = COS.map(function (co) { return scores(co).filter(function (x) { return x !== null; }).length; });
+    view.innerHTML = '<h2>Summary Sheet</h2><div class="meta">' + inputs + '</div>' +
+      '<div class="cards"><div><b>' + S.length + '</b>students</div><div><b>' + done.join(' / ') + '</b>complete marks, CO1 to CO5</div></div>' +
+      '<div class="scroll"><table><thead><tr><th>CO</th><th>Course outcome</th><th>Assessment tools and weightage (from CO sheet formulas)</th><th>Target</th><th>Threshold</th>' +
+      '<th>Attainment % based on threshold</th><th>Average attainment %</th><th>Relative attainment %</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<p class="note">Students without all three marks entered are left out of that CO\'s statistics and shown as “–”.</p>';
+  }
+
+  function renderCO(co) {
+    var t = TOOLS[co];
+    var body = S.map(function (s, r) {
+      var m = mk(co, s[0]);
+      return '<tr><td>' + (r + 1) + '</td><td>' + s[0] + '</td><td class="l">' + esc(s[1]) + '</td>' + [0, 1, 2].map(function (i) {
+        return '<td><input type="number" inputmode="decimal" min="0" max="100" step="any" data-co="' + co + '" data-reg="' + s[0] + '" data-i="' + i + '" value="' + esc(m[i]) + '" aria-label="' + t[i] + ' for ' + esc(s[1]) + '"></td>';
+      }).join('') + '<td class="calc" data-g="' + r + '">–</td></tr>';
+    }).join('');
+    view.innerHTML = '<h2>' + co + ' – Attainment <button id="clr" class="mini">Clear this sheet</button></h2><p class="note">Enter marks as percentages (0 to 100). Yellow cells are for marks; grey cells are calculated.</p>' +
+      '<div class="scroll"><table><thead><tr><th>S.No</th><th>Reg No</th><th>Student Name</th><th>' + t[0] + ' (' + C.W[co][0] + '%)</th><th>' + t[1] + ' (' + C.W[co][1] + '%)</th><th>' + t[2] + ' (' + C.W[co][2] + '%)</th><th>CO Attainment</th></tr></thead><tbody>' +
+      body + '</tbody><tfoot id="foot"></tfoot></table></div>';
+    document.getElementById('clr').onclick = function () { ask(this, 'Tap again to clear ' + co, function () { delete state.marks[co]; save(); renderCO(co); }); };
+    updateCO(co);
+  }
+
+  function updateCO(co) {
+    var sc = scores(co), st = C.stats(sc);
+    view.querySelectorAll('[data-g]').forEach(function (td) { td.textContent = f(sc[+td.dataset.g]); });
+    view.querySelectorAll('input[data-co]').forEach(function (inp) { inp.classList.toggle('bad', C.parse(inp.value).s === 'invalid'); });
+    document.getElementById('foot').innerHTML = statRows([st]).replace(/<th colspan="3">/g, '<th colspan="6">') +
+      '<tr class="stat"><th colspan="6">Students with complete marks</th><td class="calc">' + st.n + ' of ' + S.length + '</td></tr>';
+  }
+
+  function overallData() {
+    var per = COS.map(scores), st = per.map(C.stats);
+    return { per: per, st: st, avg: S.map(function (s, r) { return C.overallStudent(per.map(function (p) { return p[r]; })); }), tot: C.overallStats(st) };
+  }
+
+  function renderOverall() {
+    var d = overallData();
+    var body = S.map(function (s, r) {
+      return '<tr><td>' + (r + 1) + '</td><td>' + s[0] + '</td><td class="l">' + esc(s[1]) + '</td>' +
+        d.per.map(function (p) { return '<td class="calc">' + f(p[r]) + '</td>'; }).join('') + '<td class="calc"><b>' + f(d.avg[r]) + '</b></td></tr>';
+    }).join('');
+    var all = d.st.concat([d.tot]);
+    view.innerHTML = '<h2>Overall</h2><div class="scroll"><table><thead><tr><th>S.No</th><th>Reg No</th><th>Student Name</th>' +
+      COS.map(function (c) { return '<th>' + c + ' (100)</th>'; }).join('') + '<th>Overall Avg. (100)</th></tr></thead><tbody>' + body +
+      '</tbody><tfoot>' + statRows(all) + '</tfoot></table></div><p class="note">The last column of the lower block is the average of the five CO columns, as in the workbook. It shows “–” until all five COs have results.</p>';
+  }
+
+  function show(t) {
+    tab = t; document.querySelectorAll('nav a').forEach(function (a) { a.classList.toggle('on', a.dataset.t === t); });
+    if (t === 'summary') renderSummary(); else if (t === 'overall') renderOverall(); else renderCO(t);
+    head(); window.scrollTo(0, 0);
+  }
+
+  document.getElementById('nav').innerHTML = [['summary', 'Summary Sheet']].concat(COS.map(function (c) { return [c, c]; }), [['overall', 'Overall']])
+    .map(function (x) { return '<a href="#' + x[0] + '" data-t="' + x[0] + '">' + x[1] + '</a>'; }).join('');
+  document.getElementById('nav').addEventListener('click', function (e) {
+    var a = e.target.closest('a'); if (!a) return; e.preventDefault(); show(a.dataset.t);
+    try { history.replaceState(null, '', '#' + a.dataset.t); } catch (x) {}
+  });
+  window.addEventListener('hashchange', function () { var t = location.hash.slice(1); show(/^(summary|overall|CO[1-5])$/.test(t) ? t : 'summary'); });
+
+  view.addEventListener('input', function (e) {
+    var el = e.target, d = el.dataset;
+    if (d.meta) { state.meta[d.meta] = el.value; save(); head(); return; }
+    if (!d.co) return;
+    var m = state.marks[d.co] = state.marks[d.co] || {}; var row = m[d.reg] = m[d.reg] || ['', '', ''];
+    row[+d.i] = el.value; save(); updateCO(d.co);
+  });
+
+  function csv() {
+    var d = overallData(), h = ['Reg No', 'Name'];
+    COS.forEach(function (c) { TOOLS[c].forEach(function (t) { h.push(c + ' ' + t); }); h.push(c + ' Attainment'); }); h.push('Overall Avg');
+    var rows = [h].concat(S.map(function (s, r) {
+      var row = [s[0], s[1]];
+      COS.forEach(function (c, i) { mk(c, s[0]).forEach(function (x) { row.push(x); }); row.push(d.per[i][r] === null ? '' : d.per[i][r]); });
+      row.push(d.avg[r] === null ? '' : d.avg[r]); return row;
+    }));
+    var blob = new Blob([rows.map(function (r) { return r.map(function (x) { return '"' + String(x).replace(/"/g, '""') + '"'; }).join(','); }).join('\r\n')], { type: 'text/csv' });
+    saveBlob(blob, 'co-attainment.csv');
+  }
+  /* ---------- Final Excel (.xlsx) generator: same sheets as the workbook, with live formulas ---------- */
+  var CRC = (function () { var t = [], c, n, k; for (n = 0; n < 256; n++) { c = n; for (k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(b) { var c = -1; for (var i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (~c) >>> 0; }
+  function zip(files) {
+    var enc = new TextEncoder(), parts = [], cen = [], off = 0, cs = 0;
+    files.forEach(function (f) {
+      var nm = enc.encode(f[0]), d = enc.encode(f[1]), crc = crc32(d), h = new DataView(new ArrayBuffer(30)), c = new DataView(new ArrayBuffer(46));
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint32(14, crc, true); h.setUint32(18, d.length, true); h.setUint32(22, d.length, true); h.setUint16(26, nm.length, true);
+      c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint32(16, crc, true); c.setUint32(20, d.length, true); c.setUint32(24, d.length, true); c.setUint16(28, nm.length, true); c.setUint32(42, off, true);
+      parts.push(new Uint8Array(h.buffer), nm, d); cen.push(new Uint8Array(c.buffer), nm); off += 30 + nm.length + d.length;
+    });
+    cen.forEach(function (x) { cs += x.length; });
+    var e = new DataView(new ArrayBuffer(22)); e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, cs, true); e.setUint32(16, off, true);
+    return new Blob(parts.concat(cen, [new Uint8Array(e.buffer)]), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+  var ST = { head: 1, input: 2, calc: 3, text: 4, title: 5 };
+  function cx(r, c, v, st, fm) {
+    var ref = String.fromCharCode(65 + c) + r, s = ' s="' + (st || 0) + '"';
+    if (fm !== undefined) { var str = typeof v === 'string' || v === null; return '<c r="' + ref + '"' + s + (str ? ' t="str"' : '') + '><f>' + esc(fm) + '</f><v>' + (v === null ? '' : esc(v)) + '</v></c>'; }
+    if (v === null || v === undefined || v === '') return '<c r="' + ref + '"' + s + '/>';
+    if (typeof v === 'number') return '<c r="' + ref + '"' + s + '><v>' + v + '</v></c>';
+    return '<c r="' + ref + '"' + s + ' t="inlineStr"><is><t>' + esc(v) + '</t></is></c>';
+  }
+  function sheetXml(rows, widths) {
+    var ks = Object.keys(rows).map(Number).sort(function (a, b) { return a - b; });
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols>' +
+      widths.map(function (w, i) { return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>'; }).join('') + '</cols><sheetData>' +
+      ks.map(function (k) { return '<row r="' + k + '">' + rows[k].join('') + '</row>'; }).join('') + '</sheetData></worksheet>';
+  }
+  function add(rows, r, x) { (rows[r] = rows[r] || []).push(x); }
+  function buildXlsx() {
+    var d = overallData(), n = S.length, r0 = 8, r1 = r0 + n - 1, sheets = [], L = 'Average attainment|Target|Threshold|No. of students attained threshold|Attainment % based on threshold|Relative attainment % based on average attainment'.split('|');
+    var rA = r1 + 2, rT = rA + 1, rH = rA + 2, rC = rA + 3, rP = rA + 4, rR = rA + 5, college = 'NATIONAL ENGINEERING COLLEGE, K.R. NAGAR, KOVILPATTI - 628503.';
+    var sum = {};
+    add(sum, 1, cx(1, 0, college, ST.title)); add(sum, 2, cx(2, 0, 'Department of Science and Humanities', ST.title)); add(sum, 3, cx(3, 0, 'Course Outcome Attainment', ST.title)); add(sum, 4, cx(4, 0, 'SUMMARY SHEET', ST.title));
+    add(sum, 5, cx(5, 0, 'Course code and Name', ST.text)); add(sum, 5, cx(5, 1, meta('course'), ST.text));
+    add(sum, 6, cx(6, 0, 'Year, Semester, Branch & Section', ST.text)); add(sum, 6, cx(6, 1, meta('year') || 'I CSE - B', ST.text));
+    add(sum, 7, cx(7, 0, 'Name of the Course Instructor', ST.text)); add(sum, 7, cx(7, 1, meta('instructor'), ST.text));
+    add(sum, 8, cx(8, 0, 'Total No. of Students', ST.text)); add(sum, 8, cx(8, 1, n, ST.text));
+    ['CO', 'Course outcome', 'Assessment tools and weightage', 'Target', 'Threshold', 'Attainment % based on threshold', 'Average Attainment %', 'Relative attainment % based on Avg Attainment'].forEach(function (h, i) { add(sum, 10, cx(10, i, h, ST.head)); });
+    COS.forEach(function (co, i) {
+      var r = 11 + i, st = d.st[i], w = C.W[co];
+      add(sum, r, cx(r, 0, co, ST.text)); add(sum, r, cx(r, 1, meta(co), ST.text));
+      add(sum, r, cx(r, 2, TOOLS[co].map(function (t, j) { return t + ' ' + w[j] + '%'; }).join(', '), ST.text));
+      add(sum, r, cx(r, 3, C.TARGET, ST.calc, "'" + co + "'!G" + rT)); add(sum, r, cx(r, 4, C.THRESHOLD, ST.calc, "'" + co + "'!G" + rH));
+      add(sum, r, cx(r, 5, st.pct, ST.calc, "'" + co + "'!G" + rP)); add(sum, r, cx(r, 6, st.avg, ST.calc, "'" + co + "'!G" + rA)); add(sum, r, cx(r, 7, st.rel, ST.calc, "'" + co + "'!G" + rR));
+    });
+    add(sum, 18, cx(18, 0, meta('instructor'), ST.text)); add(sum, 18, cx(18, 3, meta('coordinator'), ST.text)); add(sum, 18, cx(18, 6, meta('hod'), ST.text));
+    add(sum, 19, cx(19, 0, 'Course Instructor', ST.text)); add(sum, 19, cx(19, 3, 'Course Coordinator', ST.text)); add(sum, 19, cx(19, 6, 'HOD', ST.text));
+    sheets.push(['Summary Sheet', sheetXml(sum, [30, 40, 44, 12, 12, 22, 22, 26])]);
+    COS.forEach(function (co, ci) {
+      var R = {}, w = C.W[co], t = TOOLS[co], sc = d.per[ci], st = d.st[ci], rng = function (c) { return c + r0 + ':' + c + r1; };
+      add(R, 1, cx(1, 0, college, ST.title)); add(R, 2, cx(2, 0, 'COURSE OUTCOME ' + co.slice(2) + ' - ATTAINMENT', ST.title));
+      add(R, 4, cx(4, 0, 'Course code and Name', ST.text)); add(R, 4, cx(4, 3, meta('course'), ST.text)); add(R, 5, cx(5, 0, 'Year, Semester, Branch & Section', ST.text)); add(R, 5, cx(5, 3, meta('year') || 'I CSE - B', ST.text));
+      ['S.No', 'Reg No', 'Student Name', t[0] + ' (' + w[0] + '%)', t[1] + ' (' + w[1] + '%)', t[2] + ' (' + w[2] + '%)', 'CO Attainment'].forEach(function (h, i) { add(R, 7, cx(7, i, h, ST.head)); });
+      S.forEach(function (s, i) {
+        var r = r0 + i, m = mk(co, s[0]);
+        add(R, r, cx(r, 0, i + 1, ST.text)); add(R, r, cx(r, 1, s[0], ST.text)); add(R, r, cx(r, 2, s[1], ST.text));
+        [0, 1, 2].forEach(function (j) { var p = C.parse(m[j]); add(R, r, cx(r, 3 + j, p.s === 'ok' ? p.n : null, ST.input)); });
+        add(R, r, cx(r, 6, sc[i], ST.calc, 'IF(COUNT(D' + r + ':F' + r + ')=3,(((D' + r + '/100)*' + w[0] + '))+((E' + r + '/100)*' + w[1] + ')+((F' + r + '/100)*' + w[2] + '),"")'));
+      });
+      var G = rng('G'), cnt = 'COUNT(' + G + ')';
+      [[rA, st.avg, 'IF(' + cnt + '=0,"",SUM(' + G + ')/' + cnt + ')'], [rT, C.TARGET], [rH, C.THRESHOLD],
+       [rC, st.count === null ? 0 : st.count, 'COUNTIF(' + G + ',">"&G' + rH + ')'], [rP, st.pct, 'IF(' + cnt + '=0,"",(G' + rC + '/' + cnt + ')*100)'],
+       [rR, st.rel, 'IF(G' + rA + '="","",(G' + rA + '/G' + rT + ')*100)']].forEach(function (x, i) {
+        add(R, x[0], cx(x[0], 3, L[i], ST.head)); add(R, x[0], cx(x[0], 6, x[1], ST.calc, x[2]));
+      });
+      add(R, rR + 3, cx(rR + 3, 0, meta('instructor'), ST.text)); add(R, rR + 3, cx(rR + 3, 3, meta('coordinator'), ST.text)); add(R, rR + 3, cx(rR + 3, 6, meta('hod'), ST.text));
+      sheets.push([co, sheetXml(R, [7, 14, 26, 18, 18, 18, 16])]);
+    });
+    var O = {};
+    add(O, 1, cx(1, 0, college, ST.title)); add(O, 2, cx(2, 0, 'COURSE OUTCOME - ATTAINMENT', ST.title));
+    ['S.No', 'Reg No', 'Student Name'].concat(COS.map(function (c) { return c + ' (100)'; }), ['Overall Avg. (100)']).forEach(function (h, i) { add(O, 7, cx(7, i, h, ST.head)); });
+    S.forEach(function (s, i) {
+      var r = r0 + i; add(O, r, cx(r, 0, i + 1, ST.text)); add(O, r, cx(r, 1, s[0], ST.text)); add(O, r, cx(r, 2, s[1], ST.text));
+      COS.forEach(function (co, j) { add(O, r, cx(r, 3 + j, d.per[j][i], ST.calc, "'" + co + "'!G" + r)); });
+      add(O, r, cx(r, 8, d.avg[i], ST.calc, 'IF(COUNT(D' + r + ':H' + r + ')=5,AVERAGE(D' + r + ':H' + r + '),"")'));
+    });
+    [[rA, 'avg'], [rT, 'target'], [rH, 'threshold'], [rC, 'count'], [rP, 'pct'], [rR, 'rel']].forEach(function (x, i) {
+      add(O, x[0], cx(x[0], 2, L[i], ST.head));
+      COS.forEach(function (co, j) { var v = d.st[j][x[1]]; add(O, x[0], cx(x[0], 3 + j, x[1] === 'count' && v === null ? 0 : v, ST.calc, "'" + co + "'!G" + x[0])); });
+      add(O, x[0], cx(x[0], 8, d.tot[x[1]], ST.calc, 'IF(COUNT(D' + x[0] + ':H' + x[0] + ')=5,AVERAGE(D' + x[0] + ':H' + x[0] + '),"")'));
+    });
+    sheets.push(['Overall', sheetXml(O, [7, 14, 26, 14, 14, 14, 14, 14, 18])]);
+    var NS = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"', RN = 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"', H = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+    var RT = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/', files = [
+      ['[Content_Types].xml', H + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+        sheets.map(function (s, i) { return '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'; }).join('') + '</Types>'],
+      ['_rels/.rels', H + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="' + RT + 'officeDocument" Target="xl/workbook.xml"/></Relationships>'],
+      ['xl/workbook.xml', H + '<workbook ' + NS + ' ' + RN + '><sheets>' + sheets.map(function (s, i) { return '<sheet name="' + s[0] + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>'; }).join('') + '</sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>'],
+      ['xl/_rels/workbook.xml.rels', H + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + sheets.map(function (s, i) { return '<Relationship Id="rId' + (i + 1) + '" Type="' + RT + 'worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>'; }).join('') + '<Relationship Id="rId99" Type="' + RT + 'styles" Target="styles.xml"/></Relationships>'],
+      ['xl/styles.xml', H + '<styleSheet ' + NS + '><numFmts count="0"/><fonts count="2"><font><sz val="11"/><name val="Arial"/></font><font><b/><sz val="11"/><name val="Arial"/></font></fonts>' +
+        '<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFF3C4"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE8EEEA"/></patternFill></fill></fills>' +
+        '<borders count="2"><border/><border><left style="thin"/><right style="thin"/><top style="thin"/><bottom style="thin"/></border></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="6"><xf/>' +
+        '<xf fontId="1" fillId="3" borderId="1" applyFont="1" applyFill="1" applyBorder="1"><alignment horizontal="center" wrapText="1"/></xf>' +
+        '<xf fillId="2" borderId="1" applyFill="1" applyBorder="1"/>' +
+        '<xf fillId="3" borderId="1" numFmtId="1" applyFill="1" applyBorder="1" applyNumberFormat="1"/>' +
+        '<xf borderId="1" applyBorder="1"/><xf fontId="1" applyFont="1"/></cellXfs></styleSheet>']
+    ];
+    sheets.forEach(function (s, i) { files.push(['xl/worksheets/sheet' + (i + 1) + '.xml', s[1]]); });
+    return zip(files);
+  }
+  function say(t) { var m = document.getElementById('msg'); if (m) m.textContent = t; }
+  function anchorSave(blob, name) {
+    var a = document.createElement('a'), u = URL.createObjectURL(blob); a.href = u; a.download = name; a.style.display = 'none';
+    document.body.appendChild(a); a.click(); setTimeout(function () { document.body.removeChild(a); }, 4000); setTimeout(function () { URL.revokeObjectURL(u); }, 600000);
+    var m = document.getElementById('msg'), canShare = false, file;
+    try { file = new File([blob], name, { type: blob.type }); canShare = !!(navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) {}
+    m.innerHTML = esc(name) + ' is downloading (check Downloads). Nothing downloaded? <a class="dl" href="' + u + '" download="' + esc(name) + '">Tap here to save it</a>' + (canShare ? ' or <button id="shr">Share / Save to Files</button>' : '') + '.';
+    if (canShare) document.getElementById('shr').onclick = function () { navigator.share({ files: [file], title: name }).catch(function () {}); };
+  }
+  // Saves the file to the device: normal download on laptops and Android; the share sheet ("Save to Files") on iPhone/iPad.
+  function saveBlob(blob, name) {
+    var ios = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform));
+    try {
+      var file = new File([blob], name, { type: blob.type });
+      if (ios && navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: name }).then(function () { say('Choose "Save to Files" to keep ' + name + '.'); })
+          .catch(function (e) { if (e && e.name === 'AbortError') say('Not saved. Press the button again to save ' + name + '.'); else anchorSave(blob, name); });
+        return;
+      }
+    } catch (e) {}
+    anchorSave(blob, name);
+  }
+  document.getElementById('xlsx').onclick = function () { say('Preparing Excel file…'); saveBlob(buildXlsx(), 'CO-Attainment-CSE-B.xlsx'); };
+  document.getElementById('csv').onclick = csv;
+  document.getElementById('print').onclick = function () { window.print(); };
+  document.getElementById('reset').onclick = function () {
+    ask(this, 'Tap again to clear all marks', function () { state.marks = {}; save(); show(tab); });
+  };
+  if (window.self !== window.top) document.getElementById('warn').textContent = 'This page is open inside a preview or another app, which usually blocks saving files. For the Excel download to work, open CO-Attainment-Calculator.html directly in Chrome or Safari.';
+  var h0 = ''; try { h0 = location.hash.slice(1); } catch (x) {} show(/^(summary|overall|CO[1-5])$/.test(h0) ? h0 : 'summary');
+})();
+</script>
+</body>
+</html>
