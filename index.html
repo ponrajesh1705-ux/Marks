@@ -71,7 +71,7 @@ footer{padding:12px 16px;font-size:12px;color:#4a5a66}
   ['26104068', 'KULANDAI ANANTHAN R'], ['26104069', 'DEVI SRI S'], ['26104070', 'SAKTHEESH M'],
   ['26104071', 'KIRUTHIKA P'], ['26104072', 'NEHA SHREE A'], ['26104073', 'SERANTHAYAN A'],
   ['26104074', 'VANI S'], ['26104075', 'RENUKASRI R S'], ['26104076', 'NELASREE S'],
-  ['26104077', 'INDHUDEVI S'], ['26104078', 'SHREEJAS'], ['26104079', 'MANOJKUMAR V'],
+  ['26104077', 'INDHUDEVI S'], ['26104078', 'SHREEJA S'], ['26104079', 'MANOJKUMAR V'],
   ['26104080', 'SUBA LAKSHMI R'], ['26104081', 'LAKSHITHA K'], ['26104082', 'KARPAGASELVI N'],
   ['26104083', 'CHANDRU S'], ['26104084', 'JAYASHREE K'], ['26104128', 'DHARUN KANNAN A']
 ];
@@ -145,7 +145,7 @@ if (typeof module !== "undefined") module.exports = (typeof window !== "undefine
     ['instructor', 'Course instructor'], ['coordinator', 'Course coordinator'], ['hod', 'HOD']];
   var state = load(), tab = 'summary', view = document.getElementById('view');
 
-  function load() { try { var s = JSON.parse(localStorage.getItem(KEY)); if (s && s.marks) return s; } catch (e) {} return { marks: {}, meta: {} }; }
+  function load() { try { var s = JSON.parse(localStorage.getItem(KEY)); if (s && s.marks) { s.meta = Object.assign({ year: 'I CSE - B' }, s.meta); return s; } } catch (e) {} return { marks: {}, meta: { year: 'I CSE - B' } }; }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
   // Two-tap confirmation. window.confirm() is silently blocked inside many previews and in-app viewers, so it is not used.
   function ask(btn, text, action) {
@@ -163,7 +163,7 @@ if (typeof module !== "undefined") module.exports = (typeof window !== "undefine
     document.getElementById('sub').textContent = meta('year') || 'I CSE – B';
   }
 
-  function statRows(st, cols) { // cols: array of stat objects; returns tbody rows
+  function statRows(st) { // st: array of stat objects; returns tbody rows
     var rows = [['Average attainment', 'avg'], ['Target', 'target'], ['Threshold', 'threshold'],
       ['No. of students attained threshold (> threshold)', 'count'], ['Attainment % based on threshold', 'pct'],
       ['Relative attainment % based on average attainment', 'rel']];
@@ -210,7 +210,7 @@ if (typeof module !== "undefined") module.exports = (typeof window !== "undefine
   function updateCO(co) {
     var sc = scores(co), st = C.stats(sc);
     view.querySelectorAll('[data-g]').forEach(function (td) { td.textContent = f(sc[+td.dataset.g]); });
-    view.querySelectorAll('input[data-co]').forEach(function (inp) { inp.classList.toggle('bad', C.parse(inp.value).s === 'invalid'); });
+    view.querySelectorAll('input[data-co]').forEach(function (inp) { inp.classList.toggle('bad', inp.validity.badInput || C.parse(inp.value).s === 'invalid'); });
     document.getElementById('foot').innerHTML = statRows([st]).replace(/<th colspan="3">/g, '<th colspan="6">') +
       '<tr class="stat"><th colspan="6">Students with complete marks</th><td class="calc">' + st.n + ' of ' + S.length + '</td></tr>';
   }
@@ -262,7 +262,18 @@ if (typeof module !== "undefined") module.exports = (typeof window !== "undefine
       COS.forEach(function (c, i) { mk(c, s[0]).forEach(function (x) { row.push(x); }); row.push(d.per[i][r] === null ? '' : d.per[i][r]); });
       row.push(d.avg[r] === null ? '' : d.avg[r]); return row;
     }));
-    var blob = new Blob([rows.map(function (r) { return r.map(function (x) { return '"' + String(x).replace(/"/g, '""') + '"'; }).join(','); }).join('\r\n')], { type: 'text/csv' });
+    var L = [['Average attainment', 'avg'], ['Target', 'target'], ['Threshold', 'threshold'],
+      ['No. of students attained threshold (> threshold)', 'count'], ['Attainment % based on threshold', 'pct'],
+      ['Relative attainment % based on average attainment', 'rel']];
+    L.forEach(function (item) {
+      var statRow = ['', item[0]];
+      COS.forEach(function (c, i) {
+        statRow.push('', '', '', d.st[i][item[1]] === null ? '' : d.st[i][item[1]]);
+      });
+      statRow.push(d.tot[item[1]] === null ? '' : d.tot[item[1]]);
+      rows.push(statRow);
+    });
+    var blob = new Blob(['\uFEFF' + rows.map(function (r) { return r.map(function (x) { return '"' + String(x == null ? '' : x).replace(/"/g, '""') + '"'; }).join(','); }).join('\r\n')], { type: 'text/csv;charset=utf-8;' });
     saveBlob(blob, 'co-attainment.csv');
   }
   /* ---------- Final Excel (.xlsx) generator: same sheets as the workbook, with live formulas ---------- */
@@ -328,11 +339,12 @@ if (typeof module !== "undefined") module.exports = (typeof window !== "undefine
       });
       var G = rng('G'), cnt = 'COUNT(' + G + ')';
       [[rA, st.avg, 'IF(' + cnt + '=0,"",SUM(' + G + ')/' + cnt + ')'], [rT, C.TARGET], [rH, C.THRESHOLD],
-       [rC, st.count === null ? 0 : st.count, 'COUNTIF(' + G + ',">"&G' + rH + ')'], [rP, st.pct, 'IF(' + cnt + '=0,"",(G' + rC + '/' + cnt + ')*100)'],
+       [rC, st.count, 'IF(' + cnt + '=0,"",COUNTIFS(' + G + ',">"&G' + rH + ',' + G + ',"<=100"))'], [rP, st.pct, 'IF(' + cnt + '=0,"",(G' + rC + '/' + cnt + ')*100)'],
        [rR, st.rel, 'IF(G' + rA + '="","",(G' + rA + '/G' + rT + ')*100)']].forEach(function (x, i) {
         add(R, x[0], cx(x[0], 3, L[i], ST.head)); add(R, x[0], cx(x[0], 6, x[1], ST.calc, x[2]));
       });
       add(R, rR + 3, cx(rR + 3, 0, meta('instructor'), ST.text)); add(R, rR + 3, cx(rR + 3, 3, meta('coordinator'), ST.text)); add(R, rR + 3, cx(rR + 3, 6, meta('hod'), ST.text));
+      add(R, rR + 4, cx(rR + 4, 0, 'Course Instructor', ST.text)); add(R, rR + 4, cx(rR + 4, 3, 'Course Coordinator', ST.text)); add(R, rR + 4, cx(rR + 4, 6, 'HOD', ST.text));
       sheets.push([co, sheetXml(R, [7, 14, 26, 18, 18, 18, 16])]);
     });
     var O = {};
@@ -345,9 +357,11 @@ if (typeof module !== "undefined") module.exports = (typeof window !== "undefine
     });
     [[rA, 'avg'], [rT, 'target'], [rH, 'threshold'], [rC, 'count'], [rP, 'pct'], [rR, 'rel']].forEach(function (x, i) {
       add(O, x[0], cx(x[0], 2, L[i], ST.head));
-      COS.forEach(function (co, j) { var v = d.st[j][x[1]]; add(O, x[0], cx(x[0], 3 + j, x[1] === 'count' && v === null ? 0 : v, ST.calc, "'" + co + "'!G" + x[0])); });
+      COS.forEach(function (co, j) { var v = d.st[j][x[1]]; add(O, x[0], cx(x[0], 3 + j, v, ST.calc, "'" + co + "'!G" + x[0])); });
       add(O, x[0], cx(x[0], 8, d.tot[x[1]], ST.calc, 'IF(COUNT(D' + x[0] + ':H' + x[0] + ')=5,AVERAGE(D' + x[0] + ':H' + x[0] + '),"")'));
     });
+    add(O, rR + 3, cx(rR + 3, 0, meta('instructor'), ST.text)); add(O, rR + 3, cx(rR + 3, 3, meta('coordinator'), ST.text)); add(O, rR + 3, cx(rR + 3, 6, meta('hod'), ST.text));
+    add(O, rR + 4, cx(rR + 4, 0, 'Course Instructor', ST.text)); add(O, rR + 4, cx(rR + 4, 3, 'Course Coordinator', ST.text)); add(O, rR + 4, cx(rR + 4, 6, 'HOD', ST.text));
     sheets.push(['Overall', sheetXml(O, [7, 14, 26, 14, 14, 14, 14, 14, 18])]);
     var NS = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"', RN = 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"', H = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
     var RT = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/', files = [
@@ -395,7 +409,7 @@ if (typeof module !== "undefined") module.exports = (typeof window !== "undefine
   document.getElementById('reset').onclick = function () {
     ask(this, 'Tap again to clear all marks', function () { state.marks = {}; save(); show(tab); });
   };
-  if (window.self !== window.top) document.getElementById('warn').textContent = 'This page is open inside a preview or another app, which usually blocks saving files. For the Excel download to work, open CO-Attainment-Calculator.html directly in Chrome or Safari.';
+  if (window.self !== window.top) document.getElementById('warn').textContent = 'This page is open inside a preview or another app, which usually blocks saving files. For the Excel download to work, open index.html directly in Chrome or Safari.';
   var h0 = ''; try { h0 = location.hash.slice(1); } catch (x) {} show(/^(summary|overall|CO[1-5])$/.test(h0) ? h0 : 'summary');
 })();
 </script>
