@@ -85,20 +85,17 @@ app.post('/api/send-emails', emailLimiter, requireApiKey, async (req, res) => {
   try {
     
 const { marks, meta, testRecipient } = req.body;
+// A request may only ADD safety: preview=true forces dry-run, but nothing in a request can disable the server's DRY_RUN.
+const effectiveDryRun = DRY_RUN || req.body.dryRun === true;
 
-// If testRecipient is provided, allow only an approved registration number.
-if (
-  testRecipient !== undefined &&
-  !ALLOWED_REG_NOS.has(String(testRecipient))
-) {
+// testRecipient is REQUIRED: a missing/empty/non-allowlisted value is rejected (never treated as "all six").
+if (typeof testRecipient !== 'string' || !ALLOWED_REG_NOS.has(testRecipient)) {
   return res.status(400).json({
-    error: 'Invalid testRecipient. Use one of the approved registration numbers.'
+    error: 'testRecipient is required and must be one of the approved registration numbers.'
   });
 }
 
-const recipientsToProcess = testRecipient !== undefined
-  ? [String(testRecipient)]
-  : ALLOWED_REG_NOS;
+const recipientsToProcess = [testRecipient];
 
 
     // Validate request body
@@ -130,7 +127,7 @@ const recipientsToProcess = testRecipient !== undefined
         // Generate isolated, individual Excel file containing ONLY this student's data
         const excelBuffer = await generateStudentExcel(regNo, studentName, studentResults, meta);
 
-        if (DRY_RUN) {
+        if (effectiveDryRun) {
           // Dry-run mode: Save to dry-run-output/ directory for inspection without sending email
           const outDir = path.join(__dirname, 'dry-run-output');
           if (!fs.existsSync(outDir)) {
@@ -185,7 +182,7 @@ const recipientsToProcess = testRecipient !== undefined
     }
 
     res.json({
-      dryRun: DRY_RUN,
+      dryRun: effectiveDryRun,
       timestamp: new Date().toISOString(),
       recipientCount: results.length,
       results

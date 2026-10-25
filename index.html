@@ -443,7 +443,7 @@ if (typeof module !== "undefined") module.exports = (typeof window !== "undefine
       
 <label for="testRecipient">Test one student (registration number):</label>
 <select id="testRecipient">
-  <option value="">All six students</option>
+  <option value="" selected disabled>-- Select a recipient --</option>
   <option value="26104043">26104043</option>
   <option value="26104050">26104050</option>
   <option value="26104070">26104070</option>
@@ -494,6 +494,12 @@ if (typeof module !== "undefined") module.exports = (typeof window !== "undefine
 
   function doSend(dryRun) {
     if (sending) return;
+    var chosen = document.getElementById('testRecipient').value.trim();
+    if (TEST_REGS.indexOf(chosen) === -1) {
+      resultDiv.textContent = 'Error: select a recipient before sending or previewing.';
+      resultDiv.className = 'result err';
+      return;
+    }
     sending = true;
     resultDiv.className = 'result';
     resultDiv.textContent = dryRun ? 'Running dry run...' : 'Sending emails...';
@@ -518,7 +524,8 @@ if (typeof module !== "undefined") module.exports = (typeof window !== "undefine
       body: JSON.stringify({
   marks: state.marks,
   meta: state.meta,
-  testRecipient: document.getElementById('testRecipient')?.value.trim() || undefined
+  dryRun: dryRun === true,
+  testRecipient: chosen
 })
     })
     .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
