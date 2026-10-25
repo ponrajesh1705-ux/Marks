@@ -1,0 +1,18 @@
+# Environment and credentials
+.env
+server/.env
+*.env
+
+# Dependencies
+node_modules/
+server/node_modules/
+
+# Outputs and caches
+dry-run-output/
+server/dry-run-output/
+__pycache__/
+*.pyc
+
+# Local backup
+backup/
+

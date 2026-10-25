@@ -43,6 +43,21 @@ footer{padding:12px 16px;font-size:12px;color:#4a5a66}
 @media print{header .tools,nav,footer{display:none}header{background:none;color:#000}td input{background:none;border:0}.scroll{overflow:visible}}
 #msg{font-size:13px;min-height:1em}#msg a,#msg button{color:#fff;font-size:13px;padding:2px 8px}#msg a{border:0;text-decoration:underline}button.mini{font-size:12px;padding:3px 8px;margin-left:8px;border:1px solid var(--ink);background:#fff;color:var(--ink)}
 #warn{background:#f0a400;color:#1c2b3a;padding:0 8px;font-size:13px}#warn:empty{display:none}
+#emailModal{display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.5)}
+#emailModal.open{display:flex;align-items:center;justify-content:center}
+#emailModal .modal{background:#fff;border-radius:6px;padding:20px;max-width:640px;width:92%;max-height:85vh;overflow-y:auto;color:var(--ink);font:14px system-ui,sans-serif}
+#emailModal h3{margin:0 0 8px}
+#emailModal .cfg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}
+#emailModal .cfg label{font-size:12px;display:flex;flex-direction:column;gap:2px}
+#emailModal .cfg input{padding:5px;border:1px solid var(--rule);border-radius:3px;font-size:13px}
+#emailModal .recipients{font-size:13px;margin:8px 0;padding:8px;background:#f5f5f0;border-radius:3px}
+#emailModal .recipients li{margin:2px 0}
+#emailModal .actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+#emailModal .actions button{font-size:13px}
+#emailModal .result{margin-top:10px;font-size:13px;white-space:pre-wrap;max-height:240px;overflow-y:auto}
+#emailModal .result.ok{background:#e8f5e9;padding:8px;border-radius:3px}
+#emailModal .result.err{background:#fde7e5;padding:8px;border-radius:3px}
+#emailModal .close-btn{float:right;background:none;border:none;font-size:20px;cursor:pointer;color:#666;padding:0 4px}
 </style>
 </head>
 <body>
@@ -50,7 +65,7 @@ footer{padding:12px 16px;font-size:12px;color:#4a5a66}
   <p class="college">National Engineering College, K.R. Nagar, Kovilpatti – 628503 · Department of Science and Humanities</p>
   <h1>Course Outcome Attainment</h1>
   <p id="course"></p><p id="sub"></p>
-  <div class="tools"><button id="xlsx">Generate final Excel file</button><button id="csv">Export CSV</button><button id="print">Print</button><button id="reset" class="ghost">Clear marks</button></div>
+  <div class="tools"><button id="xlsx">Generate final Excel file</button><button id="csv">Export CSV</button><button id="email">📧 Send Email Reports</button><button id="print">Print</button><button id="reset" class="ghost">Clear marks</button></div>
   <p id="msg" role="status"></p>
   <p id="warn" role="alert"></p>
 </header>
@@ -413,5 +428,158 @@ if (typeof module !== "undefined") module.exports = (typeof window !== "undefine
   var h0 = ''; try { h0 = location.hash.slice(1); } catch (x) {} show(/^(summary|overall|CO[1-5])$/.test(h0) ? h0 : 'summary');
 })();
 </script>
+<div id="emailModal">
+  <div class="modal">
+    <button class="close-btn" id="emailClose">&times;</button>
+    <h3>📧 Send Individual CO Attainment Reports</h3>
+    <p style="font-size:13px;color:#4a5a66">Sends a personalised Excel report to each test student's college email. Each file contains <strong>only that student's</strong> marks and results.</p>
+    <div class="cfg">
+      <label>Backend URL<input id="emailUrl" value="http://localhost:3001" placeholder="http://localhost:3001"></label>
+      <label>API Key<input id="emailKey" type="password" value="dev-secret-key-123" placeholder="Your server API key"></label>
+    </div>
+    <h4 style="margin:8px 0 4px">Test recipients (6 students)</h4>
+    <ul class="recipients" id="recipientList"></ul>
+    <div class="actions"> 
+      
+<label for="testRecipient">Test one student (registration number):</label>
+<select id="testRecipient">
+  <option value="">All six students</option>
+  <option value="26104043">26104043</option>
+  <option value="26104050">26104050</option>
+  <option value="26104070">26104070</option>
+  <option value="26104059">26104059</option>
+  <option value="26104073">26104073</option>
+  <option value="26104079">26104079</option>
+</select>
+<p>Select one student to preview only that student's report.</p>
+
+      <button id="emailDry">🔍 Dry Run (preview only)</button>
+      <button id="emailSend" style="background:var(--accent);color:#fff;border-color:var(--accent)">📤 Send Emails</button>
+    </div>
+    <div class="result" id="emailResult"></div> 
+  </div>
+</div>
+<script>
+(function () {
+  'use strict';
+  var KEY = 'coCalcV1';
+  var TEST_REGS = ['26104043', '26104050', '26104070', '26104059', '26104073', '26104079'];
+  var STUDENTS = window.STUDENTS;
+  var studentMap = {};
+  STUDENTS.forEach(function (s) { studentMap[s[0]] = s[1]; });
+
+  var modal = document.getElementById('emailModal');
+  var resultDiv = document.getElementById('emailResult');
+  var recipientList = document.getElementById('recipientList');
+  var sending = false;
+
+  // Populate recipient list
+  recipientList.innerHTML = TEST_REGS.map(function (r) {
+    var name = studentMap[r] || '(unknown)';
+    return '<li><strong>' + r + '</strong> – ' + name + ' → ' + r + '@nec.edu.in</li>';
+  }).join('');
+
+  document.getElementById('email').onclick = function () {
+    modal.classList.add('open');
+    resultDiv.textContent = '';
+    resultDiv.className = 'result';
+  };
+  document.getElementById('emailClose').onclick = function () { modal.classList.remove('open'); };
+  modal.onclick = function (e) { if (e.target === modal) modal.classList.remove('open'); };
+
+  function getState() {
+    try { return JSON.parse(localStorage.getItem(KEY)) || { marks: {}, meta: {} }; }
+    catch (e) { return { marks: {}, meta: {} }; }
+  }
+
+  function doSend(dryRun) {
+    if (sending) return;
+    sending = true;
+    resultDiv.className = 'result';
+    resultDiv.textContent = dryRun ? 'Running dry run...' : 'Sending emails...';
+
+    var url = document.getElementById('emailUrl').value.replace(/\/+$/, '');
+    var apiKey = document.getElementById('emailKey').value;
+    var state = getState();
+
+    if (!apiKey) {
+      resultDiv.textContent = 'Error: API key is required.';
+      resultDiv.className = 'result err';
+      sending = false;
+      return;
+    }
+
+    fetch(url + '/api/send-emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Api-Key': apiKey
+      },
+      body: JSON.stringify({
+  marks: state.marks,
+  meta: state.meta,
+  testRecipient: document.getElementById('testRecipient')?.value.trim() || undefined
+})
+    })
+    .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+    .then(function (resp) {
+      if (!resp.ok) {
+        resultDiv.className = 'result err';
+        resultDiv.textContent = 'Error: ' + (resp.data.error || 'Request failed') +
+          (resp.data.details ? '\n\nDetails:\n' + resp.data.details.join('\n') : '');
+        return;
+      }
+      var d = resp.data;
+      var lines = [];
+      lines.push(d.dryRun ? '=== DRY RUN REPORT ===' : '=== EMAIL SEND REPORT ===');
+      lines.push('Timestamp: ' + d.timestamp);
+      lines.push('Recipients processed: ' + d.recipientCount);
+      lines.push('');
+      d.results.forEach(function (r) {
+        var icon = r.status === 'sent' ? '✅' : r.status === 'dry-run' ? '📋' : '❌';
+        lines.push(icon + ' ' + r.regNo + ' (' + (r.name || '') + ') → ' + (r.email || ''));
+        lines.push('   Status: ' + r.status);
+        lines.push('   ' + r.message);
+        if (r.hasIncompleteData && r.incompleteDetails) {
+          lines.push('   ⚠ Incomplete data:');
+          r.incompleteDetails.forEach(function (det) { lines.push('     • ' + det); });
+        }
+        lines.push('');
+      });
+      if (!d.dryRun) {
+        lines.push('Note: "Sent" means the email was accepted by the SMTP server.');
+        lines.push('It does NOT guarantee the email reached the student\'s inbox.');
+        lines.push('Check your Gmail "Sent" folder to confirm.');
+      }
+      resultDiv.className = 'result ok';
+      resultDiv.textContent = lines.join('\n');
+    })
+    .catch(function (err) {
+      resultDiv.className = 'result err';
+      resultDiv.textContent = 'Connection error: ' + err.message + '\n\nMake sure the backend server is running at ' + url;
+    })
+    .finally(function () { sending = false; });
+  }
+
+  document.getElementById('emailDry').onclick = function () { doSend(true); };
+  document.getElementById('emailSend').onclick = function () { 
+    if (!sending) {
+      var btn = this;
+      if (btn.dataset.armed) {
+        clearTimeout(+btn.dataset.armed);
+        btn.dataset.armed = '';
+        btn.textContent = '📤 Send Emails';
+        doSend(false);
+        return;
+      }
+      btn.textContent = '⚠ Tap again to confirm send';
+      btn.dataset.armed = String(setTimeout(function () {
+        btn.dataset.armed = '';
+        btn.textContent = '📤 Send Emails';
+      }, 4000));
+    }
+  };
+})();
+</script>
 </body>
-</html>
+</html> 
