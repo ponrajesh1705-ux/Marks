@@ -11,6 +11,12 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
+
+// Render sits behind exactly one reverse proxy. Trust that single hop only (never `true`), and only when running on
+// Render (Render sets RENDER=true), so a local server can't have its client IP spoofed via X-Forwarded-For.
+if (process.env.RENDER === 'true') {
+  app.set('trust proxy', 1);
+}
 const PORT = process.env.PORT || 3001;
 const DRY_RUN = process.env.DRY_RUN !== 'false'; // Default to dry-run true for safety
 const API_KEY = process.env.API_KEY ;
